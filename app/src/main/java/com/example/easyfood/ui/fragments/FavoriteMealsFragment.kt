@@ -29,7 +29,7 @@ import com.example.easyfood.ui.fragments.HomeFragment.Companion.MEAL_THUMB
 import com.google.android.material.snackbar.Snackbar
 
 
-class FavoriteMeals : Fragment() {
+class FavoriteMealsFragment : Fragment() {
     lateinit var recView:RecyclerView
     lateinit var fBinding:FragmentFavoriteMealsBinding
     private lateinit var myAdapter:FavoriteMealsRecyclerAdapter
