@@ -20,8 +20,8 @@ import retrofit2.Response
 class DetailsMVVM(application: Application) : AndroidViewModel(application) {
     private val mutableMealDetail = MutableLiveData<List<MealDetail>>()
     private val mutableMealBottomSheet = MutableLiveData<List<MealDetail>>()
-    private  var allMeals: LiveData<List<MealDB>>
-    private  var repository: Repository
+    private val allMeals: LiveData<List<MealDB>>
+    private val repository: Repository
 
     init {
         val mealDao = MealsDatabase.getInstance(application).dao()
@@ -29,48 +29,39 @@ class DetailsMVVM(application: Application) : AndroidViewModel(application) {
         allMeals = repository.mealList
     }
 
-    fun getAllSavedMeals() {
-        viewModelScope.launch(Dispatchers.Main) {
-        }
-    }
-
     fun insertMeal(meal: MealDB) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertFavoriteMeal(meal)
-            withContext(Dispatchers.Main) {
-            }
         }
     }
 
-    fun deleteMeal(meal:MealDB) = viewModelScope.launch(Dispatchers.IO) {
+    fun deleteMeal(meal: MealDB) = viewModelScope.launch(Dispatchers.IO) {
         repository.deleteMeal(meal)
     }
 
     fun getMealById(id: String) {
         RetrofitInstance.foodApi.getMealById(id).enqueue(object : Callback<RandomMealResponse> {
             override fun onResponse(call: Call<RandomMealResponse>, response: Response<RandomMealResponse>) {
-                mutableMealDetail.value = response.body()!!.meals
+                val meals = response.body()?.meals
+                mutableMealDetail.value = meals ?: emptyList()
             }
 
             override fun onFailure(call: Call<RandomMealResponse>, t: Throwable) {
                 Log.e(TAG, t.message.toString())
             }
-
         })
     }
 
-    fun isMealSavedInDatabase(mealId: String): Boolean {
-        var meal: MealDB? = null
-        runBlocking(Dispatchers.IO) {
-            meal = repository.getMealById(mealId)
+    fun isMealSavedInDatabase(mealId: String): LiveData<Boolean> {
+        val result = MutableLiveData<Boolean>()
+        viewModelScope.launch(Dispatchers.IO) {
+            val meal = repository.getMealById(mealId)
+            result.postValue(meal != null)
         }
-        if (meal == null)
-            return false
-        return true
-
+        return result
     }
 
-    fun deleteMealById(mealId:String){
+    fun deleteMealById(mealId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteMealById(mealId)
         }
@@ -79,25 +70,23 @@ class DetailsMVVM(application: Application) : AndroidViewModel(application) {
     fun getMealByIdBottomSheet(id: String) {
         RetrofitInstance.foodApi.getMealById(id).enqueue(object : Callback<RandomMealResponse> {
             override fun onResponse(call: Call<RandomMealResponse>, response: Response<RandomMealResponse>) {
-                mutableMealBottomSheet.value = response.body()!!.meals
+                val meals = response.body()?.meals
+                mutableMealBottomSheet.value = meals ?: emptyList()
             }
 
             override fun onFailure(call: Call<RandomMealResponse>, t: Throwable) {
                 Log.e(TAG, t.message.toString())
             }
-
         })
     }
 
-    fun observeMealDetail(): LiveData<List<MealDetail>> {
-        return mutableMealDetail
-    }
+    fun observeMealDetail(): LiveData<List<MealDetail>> = mutableMealDetail
 
-    fun observeMealBottomSheet(): LiveData<List<MealDetail>> {
-        return mutableMealBottomSheet
-    }
+    fun observeMealBottomSheet(): LiveData<List<MealDetail>> = mutableMealBottomSheet
 
-    fun observeSaveMeal(): LiveData<List<MealDB>> {
-        return allMeals
+    fun observeSaveMeal(): LiveData<List<MealDB>> = allMeals
+
+    companion object {
+        private const val TAG = "DetailsMVVM"
     }
 }
